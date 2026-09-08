@@ -1,0 +1,721 @@
+<!--
+  Newsgo untuk Blogger / Blogspot
+
+  WAJIB: ganti data-worker-url dengan origin Cloudflare Worker publik Anda.
+  OPSIONAL: isi data-site-url jika halaman artikel berada di origin lain.
+  Jangan menaruh API key, token, atau secret di widget ini.
+-->
+<section
+  class="newsgo-blogspot-widget"
+  data-worker-url="https://GANTI-DENGAN-WORKER.workers.dev"
+  data-site-url=""
+  data-database="auto"
+  data-limit="8"
+  data-heading="News"
+  data-new-tab="false"
+  data-show-source="true"
+  aria-label="News"
+>
+  <header class="newsgo-blogspot-widget__header">
+    <div class="newsgo-blogspot-widget__heading-wrap">
+      <p class="newsgo-blogspot-widget__eyebrow">Newsgo</p>
+      <h2 class="newsgo-blogspot-widget__heading" data-newsgo-heading="">News</h2>
+    </div>
+    <button class="newsgo-blogspot-widget__refresh" data-newsgo-refresh="" type="button">
+      <span class="newsgo-blogspot-widget__refresh-icon" aria-hidden="true">&#8635;</span>
+      <span>Acak lagi</span>
+    </button>
+  </header>
+
+  <p
+    class="newsgo-blogspot-widget__status"
+    data-newsgo-status=""
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  >Loading news&#8230;</p>
+
+  <ul
+    class="newsgo-blogspot-widget__list"
+    data-newsgo-list=""
+    aria-busy="true"
+  ></ul>
+
+  <noscript>
+    <p class="newsgo-blogspot-widget__noscript">
+      Aktifkan JavaScript untuk melihat berita pilihan.
+    </p>
+  </noscript>
+</section>
+
+<style>
+  .newsgo-blogspot-widget {
+    --newsgo-widget-accent: #0f766e;
+    --newsgo-widget-accent-hover: #115e59;
+    --newsgo-widget-border: #dbe4e8;
+    --newsgo-widget-card: #ffffff;
+    --newsgo-widget-muted: #64748b;
+    --newsgo-widget-surface: #f8fafc;
+    --newsgo-widget-text: #0f172a;
+    background: var(--newsgo-widget-surface);
+    border: 1px solid var(--newsgo-widget-border);
+    border-radius: 18px;
+    color: var(--newsgo-widget-text);
+    font-family: inherit;
+    margin: 1.25rem 0;
+    padding: clamp(1rem, 3vw, 1.5rem);
+  }
+
+  .newsgo-blogspot-widget,
+  .newsgo-blogspot-widget * {
+    box-sizing: border-box;
+  }
+
+  .newsgo-blogspot-widget__header {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 0.9rem;
+  }
+
+  .newsgo-blogspot-widget__heading-wrap {
+    min-width: 0;
+  }
+
+  .newsgo-blogspot-widget__eyebrow {
+    color: var(--newsgo-widget-accent);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    margin: 0 0 0.2rem;
+    text-transform: uppercase;
+  }
+
+  .newsgo-blogspot-widget__heading {
+    color: var(--newsgo-widget-text);
+    font-size: clamp(1.25rem, 3vw, 1.7rem);
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  .newsgo-blogspot-widget__refresh {
+    align-items: center;
+    background: var(--newsgo-widget-accent);
+    border: 0;
+    border-radius: 999px;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 700;
+    gap: 0.4rem;
+    line-height: 1;
+    padding: 0.7rem 0.9rem;
+  }
+
+  .newsgo-blogspot-widget__refresh:hover {
+    background: var(--newsgo-widget-accent-hover);
+  }
+
+  .newsgo-blogspot-widget__refresh:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--newsgo-widget-accent) 35%, transparent);
+    outline-offset: 3px;
+  }
+
+  .newsgo-blogspot-widget__refresh:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .newsgo-blogspot-widget__refresh-icon {
+    display: inline-block;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .newsgo-blogspot-widget[data-newsgo-loading="true"] .newsgo-blogspot-widget__refresh-icon {
+    animation: newsgo-blogspot-widget-spin 0.9s linear infinite;
+  }
+
+  .newsgo-blogspot-widget__status {
+    color: var(--newsgo-widget-muted);
+    font-size: 0.87rem;
+    margin: 0 0 0.8rem;
+  }
+
+  .newsgo-blogspot-widget__status[data-state="error"] {
+    color: #b91c1c;
+  }
+
+  .newsgo-blogspot-widget__list {
+    display: grid;
+    gap: 0.8rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .newsgo-blogspot-widget__item {
+    min-width: 0;
+  }
+
+  .newsgo-blogspot-widget__article {
+    background: var(--newsgo-widget-card);
+    border: 1px solid var(--newsgo-widget-border);
+    border-radius: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    height: 100%;
+    padding: 1rem;
+    transition: border-color 160ms ease, transform 160ms ease;
+  }
+
+  .newsgo-blogspot-widget__article:hover {
+    border-color: var(--newsgo-widget-accent);
+    transform: translateY(-2px);
+  }
+
+  .newsgo-blogspot-widget__meta {
+    align-items: center;
+    color: var(--newsgo-widget-muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    gap: 0.45rem;
+    line-height: 1.35;
+  }
+
+  .newsgo-blogspot-widget__source,
+  .newsgo-blogspot-widget__keyword {
+    background: #ecfdf5;
+    border-radius: 999px;
+    color: var(--newsgo-widget-accent-hover);
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0.2rem 0.5rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .newsgo-blogspot-widget__title {
+    font-size: 1rem;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  .newsgo-blogspot-widget__link {
+    color: var(--newsgo-widget-text);
+    text-decoration: none;
+  }
+
+  .newsgo-blogspot-widget__link:hover {
+    color: var(--newsgo-widget-accent-hover);
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .newsgo-blogspot-widget__link:focus-visible {
+    border-radius: 4px;
+    outline: 3px solid color-mix(in srgb, var(--newsgo-widget-accent) 35%, transparent);
+    outline-offset: 3px;
+  }
+
+  .newsgo-blogspot-widget__noscript {
+    color: var(--newsgo-widget-muted);
+    margin: 0.75rem 0 0;
+  }
+
+  @keyframes newsgo-blogspot-widget-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 640px) {
+    .newsgo-blogspot-widget__header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .newsgo-blogspot-widget__list {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .newsgo-blogspot-widget__article {
+      transition: none;
+    }
+
+    .newsgo-blogspot-widget[data-newsgo-loading="true"] .newsgo-blogspot-widget__refresh-icon {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+//<![CDATA[
+(function () {
+  "use strict";
+
+  var DATABASE_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/;
+  var SLUG_PATTERN = /^(?=.{1,120}$)(?=.*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  var MAX_RESPONSE_BYTES = 512000;
+  var REQUEST_TIMEOUT_MS = 12000;
+  var DEFAULT_HEADING = "News";
+
+  function WidgetError(code, status) {
+    this.name = "WidgetError";
+    this.code = code;
+    this.status = status || 0;
+    this.message = code;
+  }
+  WidgetError.prototype = Object.create(Error.prototype);
+  WidgetError.prototype.constructor = WidgetError;
+
+  function cleanText(value, maximumLength) {
+    if (typeof value !== "string") return "";
+    return value
+      .replace(/[\u0000-\u001f\u007f]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maximumLength);
+  }
+
+  function parseOrigin(value, fieldName, allowEmpty) {
+    var trimmed = cleanText(value || "", 2048);
+    if (!trimmed && allowEmpty) return "";
+    if (!trimmed || /GANTI-DENGAN/i.test(trimmed)) {
+      throw new WidgetError("config_" + fieldName);
+    }
+
+    var url;
+    try {
+      url = new URL(trimmed);
+    } catch (error) {
+      throw new WidgetError("config_" + fieldName);
+    }
+
+    var localHttp =
+      url.protocol === "http:" &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+    if (
+      (url.protocol !== "https:" && !localHttp) ||
+      url.username ||
+      url.password ||
+      (url.pathname !== "/" && url.pathname !== "") ||
+      url.search ||
+      url.hash
+    ) {
+      throw new WidgetError("config_" + fieldName);
+    }
+    return url.origin;
+  }
+
+  function parseBoolean(value, fallback, fieldName) {
+    var normalized = cleanText(value || "", 10).toLowerCase();
+    if (!normalized) return fallback;
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+    throw new WidgetError("config_" + fieldName);
+  }
+
+  function configuration(root) {
+    var workerOrigin = parseOrigin(root.getAttribute("data-worker-url"), "worker_url", false);
+    var configuredSite = parseOrigin(root.getAttribute("data-site-url"), "site_url", true);
+    var database = cleanText(root.getAttribute("data-database") || "auto", 64).toLowerCase();
+    var limitText = cleanText(root.getAttribute("data-limit") || "8", 3);
+    var limit = Number(limitText);
+    var heading = cleanText(root.getAttribute("data-heading") || DEFAULT_HEADING, 100);
+
+    if (database !== "auto" && !DATABASE_PATTERN.test(database)) {
+      throw new WidgetError("config_database");
+    }
+    if (!/^[0-9]+$/.test(limitText) || !Number.isSafeInteger(limit) || limit < 1 || limit > 12) {
+      throw new WidgetError("config_limit");
+    }
+
+    return {
+      database: database,
+      heading: heading || DEFAULT_HEADING,
+      limit: limit,
+      newTab: parseBoolean(root.getAttribute("data-new-tab"), false, "new_tab"),
+      showSource: parseBoolean(root.getAttribute("data-show-source"), true, "show_source"),
+      siteOrigin: configuredSite || workerOrigin,
+      workerOrigin: workerOrigin
+    };
+  }
+
+  function clearNode(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function makeElement(tagName, className, text) {
+    var node = document.createElement(tagName);
+    if (className) node.className = className;
+    if (typeof text === "string") node.textContent = text;
+    return node;
+  }
+
+  function isAbort(error) {
+    return error && error.name === "AbortError";
+  }
+
+  function makeApiUrl(origin, path, fresh) {
+    var url = new URL(path, origin + "/");
+    if (fresh) {
+      url.searchParams.set(
+        "newsgo_widget_nonce",
+        String(Date.now()) + "-" + String(Math.floor(Math.random() * 1000000000))
+      );
+    }
+    return url;
+  }
+
+  function responseTextWithinLimit(response) {
+    if (!response.body || typeof response.body.getReader !== "function") {
+      throw new WidgetError("invalid_response");
+    }
+
+    var reader = response.body.getReader();
+    var chunks = [];
+    var totalBytes = 0;
+
+    function releaseReader() {
+      try {
+        reader.releaseLock();
+      } catch (error) {
+        // The stream can already be released after cancellation.
+      }
+    }
+
+    function pump() {
+      return reader.read().then(function (result) {
+        if (result.done) return null;
+        if (!result.value || typeof result.value.byteLength !== "number") {
+          throw new WidgetError("invalid_response");
+        }
+
+        totalBytes += result.value.byteLength;
+        if (totalBytes > MAX_RESPONSE_BYTES) {
+          return reader.cancel("Newsgo widget response exceeds its limit").catch(function () {
+            // Keep the stable size error even if the stream is already closed.
+          }).then(function () {
+            throw new WidgetError("response_too_large");
+          });
+        }
+        chunks.push(result.value);
+        return pump();
+      });
+    }
+
+    return pump().then(function () {
+      releaseReader();
+      var bytes = new Uint8Array(totalBytes);
+      var offset = 0;
+      chunks.forEach(function (chunk) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      });
+      return new TextDecoder().decode(bytes);
+    }, function (error) {
+      releaseReader();
+      throw error;
+    });
+  }
+
+  function fetchJson(url, signal) {
+    return fetch(url.href, {
+      method: "GET",
+      mode: "cors",
+      credentials: "omit",
+      redirect: "follow",
+      referrerPolicy: "strict-origin-when-cross-origin",
+      signal: signal
+    }).then(function (response) {
+      if (!response.ok) throw new WidgetError("http", response.status);
+
+      var contentType = (response.headers.get("content-type") || "").toLowerCase();
+      var declaredLength = Number(response.headers.get("content-length"));
+      if (contentType.indexOf("application/json") === -1) {
+        return response.body.cancel("Newsgo widget expected JSON").catch(function () {
+          // Preserve the stable format error if the stream is already closed.
+        }).then(function () {
+          throw new WidgetError("invalid_response");
+        });
+      }
+      if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
+        return response.body.cancel("Newsgo widget declared response exceeds its limit").catch(function () {
+          // Preserve the stable size error if the stream is already closed.
+        }).then(function () {
+          throw new WidgetError("response_too_large");
+        });
+      }
+
+      return responseTextWithinLimit(response).then(function (body) {
+        try {
+          return JSON.parse(body);
+        } catch (error) {
+          throw new WidgetError("invalid_response");
+        }
+      });
+    }).catch(function (error) {
+      if (error instanceof WidgetError || isAbort(error)) throw error;
+      throw new WidgetError("network_or_cors");
+    });
+  }
+
+  function normalizeDatabases(payload) {
+    if (!payload || typeof payload !== "object" || !Array.isArray(payload.data)) {
+      throw new WidgetError("invalid_response");
+    }
+
+    var seen = Object.create(null);
+    return payload.data.map(function (item) {
+      var name = typeof item === "string" ? item : item && typeof item === "object" ? item.name : "";
+      if (!DATABASE_PATTERN.test(name) || seen[name]) return null;
+      seen[name] = true;
+
+      var count = item && typeof item === "object" ? item.articleCount : undefined;
+      return {
+        name: name,
+        count: Number.isSafeInteger(count) && count >= 0 ? count : null
+      };
+    }).filter(function (item) {
+      return item && item.count !== 0;
+    });
+  }
+
+  function randomUnit() {
+    if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+      var values = new Uint32Array(1);
+      window.crypto.getRandomValues(values);
+      return values[0] / 4294967296;
+    }
+    return Math.random();
+  }
+
+  function chooseDatabase(databases) {
+    if (!databases.length) throw new WidgetError("no_database");
+    var weights = databases.map(function (database) {
+      return database.count === null ? 1 : Math.max(1, database.count);
+    });
+    var total = weights.reduce(function (sum, weight) { return sum + weight; }, 0);
+    var position = randomUnit() * total;
+
+    for (var index = 0; index < databases.length; index += 1) {
+      position -= weights[index];
+      if (position < 0) return databases[index].name;
+    }
+    return databases[databases.length - 1].name;
+  }
+
+  function resolveDatabase(config, signal) {
+    if (config.database !== "auto") return Promise.resolve(config.database);
+    var catalogUrl = makeApiUrl(config.workerOrigin, "/v1/databases", false);
+    return fetchJson(catalogUrl, signal).then(function (payload) {
+      return chooseDatabase(normalizeDatabases(payload));
+    });
+  }
+
+  function normalizeArticles(payload, limit) {
+    if (!payload || typeof payload !== "object" || !Array.isArray(payload.data)) {
+      throw new WidgetError("invalid_response");
+    }
+
+    var seen = Object.create(null);
+    var articles = [];
+    payload.data.some(function (item) {
+      if (!item || typeof item !== "object") return false;
+      var slug = typeof item.slug === "string" ? item.slug : "";
+      if (!SLUG_PATTERN.test(slug) || seen[slug]) return false;
+      seen[slug] = true;
+
+      articles.push({
+        datePublished: item.date_published,
+        keyword: cleanText(item.keyword, 120),
+        slug: slug,
+        title: cleanText(item.title, 300) || "News"
+      });
+      return articles.length >= limit;
+    });
+    return articles;
+  }
+
+  function normalizeDate(value) {
+    if ((typeof value !== "string" && typeof value !== "number") || value === "") return null;
+    var candidate = value;
+    if (typeof candidate === "string") {
+      var trimmed = candidate.trim();
+      if (/^[0-9]{10,13}$/.test(trimmed)) candidate = Number(trimmed);
+      else candidate = trimmed;
+    }
+    if (typeof candidate === "number") {
+      if (!Number.isFinite(candidate)) return null;
+      if (Math.abs(candidate) < 1000000000000) candidate *= 1000;
+    }
+    var date = new Date(candidate);
+    if (!Number.isFinite(date.getTime())) return null;
+    return date;
+  }
+
+  function dateElement(value) {
+    var date = normalizeDate(value);
+    if (!date) return null;
+
+    var node = makeElement(
+      "time",
+      "newsgo-blogspot-widget__date",
+      new Intl.DateTimeFormat("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric"
+      }).format(date)
+    );
+    node.dateTime = date.toISOString();
+    return node;
+  }
+
+  function articleElement(article, database, config) {
+    var item = makeElement("li", "newsgo-blogspot-widget__item");
+    var card = makeElement("article", "newsgo-blogspot-widget__article");
+    var meta = makeElement("div", "newsgo-blogspot-widget__meta");
+
+    if (config.showSource) {
+      meta.appendChild(makeElement("span", "newsgo-blogspot-widget__source", database));
+    }
+    if (article.keyword) {
+      meta.appendChild(makeElement("span", "newsgo-blogspot-widget__keyword", article.keyword));
+    }
+    var published = dateElement(article.datePublished);
+    if (published) meta.appendChild(published);
+
+    var title = makeElement("h3", "newsgo-blogspot-widget__title");
+    var link = makeElement("a", "newsgo-blogspot-widget__link", article.title);
+    var canonical = new URL(
+      "/" + encodeURIComponent(database) + "/" + encodeURIComponent(article.slug),
+      config.siteOrigin + "/"
+    );
+    link.href = canonical.href;
+    if (config.newTab) {
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+    }
+    title.appendChild(link);
+
+    if (meta.childNodes.length) card.appendChild(meta);
+    card.appendChild(title);
+    item.appendChild(card);
+    return item;
+  }
+
+  function errorMessage(error, timedOut) {
+    if (timedOut) return "Waktu pemuatan habis. Tekan Acak lagi untuk mencoba kembali.";
+    if (!(error instanceof WidgetError)) return "Berita belum dapat dimuat. Silakan coba kembali.";
+    if (error.code.indexOf("config_") === 0) {
+      return "Konfigurasi widget belum valid. Periksa data-worker-url dan opsi widget.";
+    }
+    if (error.code === "network_or_cors") {
+      return "Worker tidak dapat diakses. Periksa HTTPS dan PUBLIC_CORS_ORIGINS pada Worker.";
+    }
+    if (error.code === "no_database") return "Belum ada database berisi artikel pada Worker.";
+    if (error.code === "http" && error.status === 404) return "Database atau endpoint tidak ditemukan.";
+    if (error.code === "http" && error.status === 429) return "Terlalu banyak permintaan. Coba beberapa saat lagi.";
+    return "Respons berita tidak valid atau layanan sedang bermasalah.";
+  }
+
+  function initialize(root) {
+    if (root.getAttribute("data-newsgo-initialized") === "true") return;
+    root.setAttribute("data-newsgo-initialized", "true");
+
+    var headingNode = root.querySelector("[data-newsgo-heading]");
+    var listNode = root.querySelector("[data-newsgo-list]");
+    var refreshButton = root.querySelector("[data-newsgo-refresh]");
+    var statusNode = root.querySelector("[data-newsgo-status]");
+    if (!headingNode || !listNode || !refreshButton || !statusNode) return;
+
+    var state = { controller: null, generation: 0 };
+    var config;
+    try {
+      config = configuration(root);
+      headingNode.textContent = config.heading;
+    } catch (error) {
+      statusNode.textContent = errorMessage(error, false);
+      statusNode.setAttribute("data-state", "error");
+      listNode.setAttribute("aria-busy", "false");
+      refreshButton.disabled = true;
+      return;
+    }
+
+    function load() {
+      state.generation += 1;
+      var generation = state.generation;
+      if (state.controller) state.controller.abort();
+      var controller = new AbortController();
+      state.controller = controller;
+      var signal = controller.signal;
+      var timedOut = false;
+      var timeout = window.setTimeout(function () {
+        timedOut = true;
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
+
+      root.setAttribute("data-newsgo-loading", "true");
+      listNode.setAttribute("aria-busy", "true");
+      refreshButton.disabled = true;
+      statusNode.removeAttribute("data-state");
+      statusNode.textContent = "Loading news\u2026";
+
+      resolveDatabase(config, signal).then(function (database) {
+        var path =
+          "/v1/databases/" + encodeURIComponent(database) +
+          "/articles/random?limit=" + encodeURIComponent(String(config.limit));
+        return fetchJson(makeApiUrl(config.workerOrigin, path, true), signal).then(function (payload) {
+          return { articles: normalizeArticles(payload, config.limit), database: database };
+        });
+      }).then(function (result) {
+        if (generation !== state.generation) return;
+        var fragment = document.createDocumentFragment();
+        result.articles.forEach(function (article) {
+          fragment.appendChild(articleElement(article, result.database, config));
+        });
+        clearNode(listNode);
+        listNode.appendChild(fragment);
+        statusNode.textContent = result.articles.length
+          ? String(result.articles.length) + " latest news from " + result.database + "."
+          : "Belum ada artikel yang dapat ditampilkan dari " + result.database + ".";
+      }).catch(function (error) {
+        if (generation !== state.generation || (isAbort(error) && !timedOut)) return;
+        clearNode(listNode);
+        statusNode.textContent = errorMessage(error, timedOut);
+        statusNode.setAttribute("data-state", "error");
+      }).then(function () {
+        window.clearTimeout(timeout);
+        if (generation !== state.generation) return;
+        root.removeAttribute("data-newsgo-loading");
+        listNode.setAttribute("aria-busy", "false");
+        refreshButton.disabled = false;
+      });
+    }
+
+    refreshButton.addEventListener("click", load);
+    load();
+  }
+
+  function initializeAll() {
+    var widgets = document.querySelectorAll(".newsgo-blogspot-widget");
+    Array.prototype.forEach.call(widgets, initialize);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeAll, { once: true });
+  } else {
+    initializeAll();
+  }
+})();
+//]]>
+</script>
