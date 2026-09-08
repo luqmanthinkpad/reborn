@@ -1,4 +1,4 @@
-const SITE_NAME = "Newsgo";
+const SITE_NAME = "What";
 const DEFAULT_DESCRIPTION = "Read a summary of the latest contents";
 const DATABASE_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$/;
 const ARTICLE_SLUG_PATTERN = /^(?=.{1,120}$)(?=.*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/;
