@@ -1,0 +1,164 @@
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const packageDirectory = join(import.meta.dir, "..");
+const widget = readFileSync(
+  join(packageDirectory, "newsgo-blogspot-widget.html"),
+  "utf8",
+);
+const readme = readFileSync(join(packageDirectory, "README.md"), "utf8");
+
+const scriptMatch = widget.match(
+  /<script>\s*\/\/<!\[CDATA\[\s*([\s\S]*?)\s*\/\/\]\]>\s*<\/script>/,
+);
+const styleMatch = widget.match(/<style>\s*([\s\S]*?)\s*<\/style>/);
+
+describe("Blogspot Newsgo widget", () => {
+  test("is a self-contained, syntactically valid paste-ready snippet", () => {
+    expect(widget).toContain('class="newsgo-blogspot-widget"');
+    expect(widget).toContain('data-worker-url="https://GANTI-DENGAN-WORKER.workers.dev"');
+    expect(widget).toContain('data-site-url=""');
+    expect(widget).toContain('data-database="auto"');
+    expect(widget).toContain("<style>");
+    expect(scriptMatch).not.toBeNull();
+    expect(styleMatch).not.toBeNull();
+    expect(() => new Function(scriptMatch?.[1] || "")).not.toThrow();
+  });
+
+  test("uses the public random endpoint as a fresh, credential-free CORS GET", () => {
+    const script = scriptMatch?.[1] || "";
+    expect(script).toContain('"/articles/random?limit="');
+    expect(script).toContain('"newsgo_widget_nonce"');
+    expect(script).toContain('mode: "cors"');
+    expect(script).toContain('credentials: "omit"');
+    expect(script).toContain('method: "GET"');
+    expect(script).toContain('"/v1/databases"');
+    expect(script).not.toMatch(/x-api-key|authorization|bearer\s|api[_-]?secret/i);
+  });
+
+  test("builds canonical database and slug links from a separate site origin", () => {
+    const script = scriptMatch?.[1] || "";
+    expect(script).toContain('configuredSite || workerOrigin');
+    expect(script).toContain('encodeURIComponent(database)');
+    expect(script).toContain('encodeURIComponent(article.slug)');
+    expect(script).toContain('config.siteOrigin + "/"');
+    expect(script).toContain('link.rel = "noopener noreferrer"');
+    expect(script).toContain("SLUG_PATTERN.test(slug)");
+    expect(script).toContain("DATABASE_PATTERN.test(database)");
+  });
+
+  test("renders API content with safe DOM operations", () => {
+    const script = scriptMatch?.[1] || "";
+    expect(script).toContain("document.createElement(tagName)");
+    expect(script).toContain("node.textContent = text");
+    expect(script).toContain("link.href = canonical.href");
+    expect(script).not.toMatch(/\.innerHTML\b|\.outerHTML\b|insertAdjacentHTML|document\.write|\beval\s*\(/);
+    expect(script).toContain("MAX_RESPONSE_BYTES");
+    expect(script).toContain("REQUEST_TIMEOUT_MS");
+    expect(script).toContain("response.body.getReader()");
+    expect(script).toContain('reader.cancel("Newsgo widget response exceeds its limit")');
+    expect(script).toContain(
+      'response.body.cancel("Newsgo widget declared response exceeds its limit")',
+    );
+    expect(script).toContain('response.body.cancel("Newsgo widget expected JSON")');
+    expect(script).not.toContain("response.text()");
+  });
+
+  test("normalizes Unix seconds, numeric strings, and milliseconds consistently", () => {
+    const script = scriptMatch?.[1] || "";
+    const instrumented = script.replace(
+      "  function initializeAll() {",
+      "  window.__newsgoNormalizeDate = normalizeDate;\n\n  function initializeAll() {",
+    );
+    const runtimeWindow: { __newsgoNormalizeDate?: (value: unknown) => Date | null } = {};
+    const inertDocument = {
+      readyState: "loading",
+      addEventListener() {},
+    };
+    new Function("window", "document", instrumented)(runtimeWindow, inertDocument);
+
+    const normalizeDate = runtimeWindow.__newsgoNormalizeDate;
+    expect(normalizeDate).toBeFunction();
+    expect(normalizeDate?.(1_700_000_000)?.toISOString()).toBe(
+      "2023-11-14T22:13:20.000Z",
+    );
+    expect(normalizeDate?.("1700000000")?.toISOString()).toBe(
+      "2023-11-14T22:13:20.000Z",
+    );
+    expect(normalizeDate?.(1_700_000_000_000)?.toISOString()).toBe(
+      "2023-11-14T22:13:20.000Z",
+    );
+    expect(normalizeDate?.("not-a-date")).toBeNull();
+  });
+
+  test("keeps markup and CSS class names scoped to the widget", () => {
+    const markupClasses = Array.from(widget.matchAll(/class="([^"]+)"/g))
+      .flatMap((match) => match[1].split(/\s+/))
+      .filter(Boolean);
+    expect(markupClasses.length).toBeGreaterThan(8);
+    expect(
+      markupClasses.every((className) => className.startsWith("newsgo-blogspot-widget")),
+    ).toBe(true);
+
+    const css = styleMatch?.[1] || "";
+    const cssClasses = Array.from(css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)).map(
+      (match) => match[1],
+    );
+    expect(cssClasses.length).toBeGreaterThan(10);
+    expect(
+      cssClasses.every((className) => className.startsWith("newsgo-blogspot-widget")),
+    ).toBe(true);
+    expect(css).not.toMatch(/(^|[,{}]\s*)(html|body|main|article|a|button|ul|li)\b/m);
+  });
+
+  test("is compatible with Blogger XML theme parsing", () => {
+    expect(widget).toContain("//<![CDATA[");
+    expect(widget).toContain("//]]>");
+    expect(widget).toContain("Memuat berita&#8230;");
+    expect(widget).toContain("Mengacak berita terbaru\\u2026");
+    expect(widget).not.toMatch(/&[a-zA-Z][a-zA-Z0-9]+;/);
+    expect(widget).not.toMatch(/[\u00c2\u00c3\u00e2\ufffd]/);
+    expect(widget).not.toMatch(/\sdata-newsgo-[a-z0-9_-]+(?=\s|>)/i);
+  });
+
+  test("is accepted by the native XML parser used for the Blogger theme path", async () => {
+    if (process.platform !== "win32") {
+      // The structural assertion above remains portable; Windows CI additionally
+      // exercises a real XML parser matching the user's Blogger-edit workflow.
+      expect(widget).toContain('data-newsgo-heading=""');
+      return;
+    }
+
+    const command = [
+      "$ErrorActionPreference='Stop'",
+      "$snippet=Get-Content -Raw -LiteralPath $env:NEWSGO_WIDGET_PATH",
+      "$document=[xml]('<root>' + $snippet + '</root>')",
+      "if ($null -eq $document.root) { exit 2 }",
+    ].join("; ");
+    const parser = Bun.spawn(
+      ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+      {
+        env: { ...process.env, NEWSGO_WIDGET_PATH: join(packageDirectory, "newsgo-blogspot-widget.html") },
+        stderr: "pipe",
+        stdout: "pipe",
+      },
+    );
+    const [status, stderr] = await Promise.all([
+      parser.exited,
+      new Response(parser.stderr).text(),
+    ]);
+    expect(stderr).toBe("");
+    expect(status).toBe(0);
+  });
+
+  test("documents installation, CORS, configuration, and SPA limitations", () => {
+    expect(readme).toContain("Gadget HTML/JavaScript");
+    expect(readme).toContain("PUBLIC_CORS_ORIGINS");
+    expect(readme).toContain("data-worker-url");
+    expect(readme).toContain("data-site-url");
+    expect(readme).toContain("data-database");
+    expect(readme).toContain("bukan salinan SPA penuh");
+    expect(readme).toContain("Jangan pernah menambahkan secret");
+  });
+});
