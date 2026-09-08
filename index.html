@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#10253f">
+    <meta name="color-scheme" content="light">
+    <meta name="robots" content="index,follow,max-image-preview:large">
+
+    <!-- NEWSGO_EDGE_SEO_START: Cloudflare may replace values inside this block. -->
+    <title>Newsgo &mdash; Latest News</title>
+    <meta name="description" content="Read the latest news summaries from Newsgo.">
+    <link rel="canonical" href="/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Newsgo">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:title" content="Newsgo &mdash; Latest News">
+    <meta property="og:description" content="Read the latest news summaries from Newsgo.">
+    <meta property="og:url" content="/">
+    <meta property="og:image" content="/favicon.ico">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Newsgo &mdash; Latest News">
+    <meta name="twitter:description" content="Read the latest news summaries from Newsgo.">
+    <meta name="twitter:image" content="/favicon.ico">
+    <script id="newsgo-jsonld" type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Newsgo","url":"/"}</script>
+    <!-- NEWSGO_EDGE_SEO_END -->
+
+    <!-- Empty means the current origin. The edge may set the canonical public origin. -->
+    <meta name="newsgo-site-url" content="">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="alternate" type="application/rss+xml" href="/rss.xml" title="Newsgo RSS">
+    <style>
+      :root{color:#222;background:#f7f7f7;font-family:Inter,ui-sans-serif,system-ui,sans-serif}*{box-sizing:border-box}body{margin:0}a{color:inherit}.site-header{min-height:4.75rem;border-bottom:1px solid #e7e7e7;background:#fff;color:#172335}.shell{width:min(70rem,calc(100% - 2rem));margin-inline:auto}main{min-height:70vh;padding-block:2rem}.loading-card{min-height:16rem;background:#fff;border-radius:.25rem}
+    </style>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/newsgo-inject.css">
+    <script src="/newsgo-inject.js" defer></script>
+    <script type="module" src="/frontend-new.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="/" data-route aria-label="Newsgo, Return to the homepage">
+          <span class="brand-mark" aria-hidden="true">N</span>
+          <span>Newsgo</span>
+        </a>
+
+        <div class="database-control">
+          <label for="database-select">Category</label>
+          <select id="database-select" disabled>
+            <option>Loading source&hellip;</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" class="shell" tabindex="-1" data-newsgo-inject-root data-newsgo-api-origin="https://powerhouse.my.id">
+      <div data-newsgo-ad-slot="header"></div>
+      <div data-newsgo-ad-slot="mini"></div>
+      <div data-newsgo-ad-slot="sidebar"></div>
+      <div id="app" aria-busy="true">
+        <section class="loading-card" aria-label="Loading content">
+          <span class="spinner" aria-hidden="true"></span>
+          <p>Loading news&hellip;</p>
+        </section>
+      </div>
+      <p id="route-status" class="sr-only" role="status" aria-live="polite"></p>
+      <section class="widget" style="margin-top:2rem">
+        <div data-newsgo-ad-slot="footer"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <p id="copyright"></p>
+      </div>
+    </footer>
+  </body>
+</html>
