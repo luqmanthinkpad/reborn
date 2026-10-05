@@ -4,7 +4,7 @@
 
   var DEFAULT_API_ORIGIN = "";
   var DEFAULT_LIMIT = 5;
-  var AD_DOMAIN = "anguishgrandpa.com";
+  var AD_DOMAIN = "hiibel.com/22";
 
   function cleanText(value, maxLength) {
     if (typeof value !== "string") return "";
@@ -103,7 +103,7 @@
     var iframeDoc = iframe.contentWindow ? iframe.contentWindow.document : iframe.contentDocument;
     if (iframeDoc) {
       iframeDoc.open();
-      iframeDoc.write("<!DOCTYPE html><html><head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;overflow:hidden;width:" + width + "px;height:" + height + "px;}</style></head><body><script type=\"text/javascript\">window.atOptions={\"key\":\"" + key + "\",\"format\":\"iframe\",\"height\":" + height + ",\"width\":" + width + ",\"params\":{}};</script><script type=\"text/javascript\" src=\"https://" + AD_DOMAIN + "/" + key + "/invoke.js\"></script></body></html>");
+      iframeDoc.write("<!DOCTYPE html><html><head><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;background:transparent;overflow:hidden;width:" + width + "px;height:" + height + "px;}</style></head><body><script type=\"text/javascript\">window.atOptions={\"key\":\"" + key + "\",\"format\":\"iframe\",\"height\":" + height + ",\"width\":" + width + ",\"params\":{}};</script><script type=\"text/javascript\" src=\"https://" + AD_DOMAIN + "/" + key></script></body></html>");
       iframeDoc.close();
     }
   }
